@@ -66,12 +66,12 @@ Para calcular la cantidad de cable necesario, dividí la estimación en dos part
 | Concepto | Cálculo / Valor |
 | :--- | :--- |
 | **CABLEADO HORIZONTAL (UTP Cat 6)** | |
-| **Total de puntos de red** | 48 puntos (42 computadoras + 6 servidores)[cite: 4]. |
+| **Total de puntos de red** | 48 puntos (42 computadoras + 6 servidores). |
 | **Distancia promedio por punto** | 15 metros (contemplando bajadas por la pared desde el techo y holgura). |
-| **Total de cable horizontal estimado** | 720 metros (48 puntos * 15 metros)[cite: 4]. |
-| **Metros por bobina estándar** | 305 metros[cite: 4]. |
-| **Cálculo de bobinas requeridas** | 720 / 305 = 2.36 bobinas[cite: 4]. |
-| **Total a comprar (UTP)** | **3 bobinas de cable UTP Categoría 6**[cite: 4]. |
+| **Total de cable horizontal estimado** | 720 metros (48 puntos * 15 metros). |
+| **Metros por bobina estándar** | 305 metros. |
+| **Cálculo de bobinas requeridas** | 720 / 305 = 2.36 bobinas. |
+| **Total a comprar (UTP)** | **3 bobinas de cable UTP Categoría 6**. |
 | **CABLEADO TRONCAL (Fibra Óptica OM3)** | |
 | **Total de enlaces troncales** | 7 enlaces (Del switch MDF hacia los switches de los otros 7 cuartos). |
 | **Distancia promedio por enlace** | 25 metros (recorriendo la escalerilla del pasillo central hasta cada cuarto). |
@@ -156,28 +156,77 @@ Este cable se utilizaría si conectáramos un switch directamente con otro switc
 | **8** | Café | Café |
 
 ## 13. Tabla de etiquetado de cables
-Un diseño de red profesional no sirve de nada si cuando falla un cable no sabemos a dónde va. Por ello, apliqué un esquema de etiquetado riguroso siguiendo las instrucciones de la práctica. 
+Un diseño de red profesional exige que cada cable esté plenamente identificado en ambos extremos para agilizar la administración y resolución de fallas. En el plano arquitectónico de QuetzalDev S.A. apliqué estrictamente el formato de etiquetado definido en las especificaciones de la práctica:
 
-Las etiquetas se colocan en ambos extremos de cada cable físico para facilitar el mantenimiento.
-
-**Reglas de formato aplicadas:**
 *   **Cableado Horizontal (Líneas verdes):** `[Área/Departamento]-[Número de Punto de Red]`.
 *   **Cableado Troncal (Líneas rojas):** `MDF-[Área/Departamento]`.
 
-A continuación presento la tabla representativa con ejemplos de las etiquetas que coloqué en el diagrama para los diferentes departamentos de QuetzalDev S.A.:
+A continuación se presenta el desglose detallado e individual de todas las etiquetas asignadas en el diagrama físico:
 
-| Segmento / Tipo de Cable | Origen de la Conexión | Destino de la Conexión | Ejemplo de Etiqueta Aplicada |
-| :--- | :--- | :--- | :--- |
-| **Horizontal** | Switch de Recepción | PC 1 en Recepción | `Recepcion-PR01` |
-| **Horizontal** | Switch de Recepción | Servidor en Recepción | `Recepcion-PR04` |
-| **Horizontal** | Switch Legal | PC 3 en Legal | `Legal-PR03` |
-| **Horizontal** | Switch Backend | Laptop 2 en Backend | `Backend-PR02` |
-| **Horizontal** | Switch Diseño e Innovación | Servidor en Diseño | `Diseño-PR08` |
-| **Horizontal** | Switch MDF (Data Center) | Servidor Principal 1 | `DataCenter-PR01` |
-| **Troncal** | Switch Principal MDF | Switch de Recepción | `MDF-Recepcion` |
-| **Troncal** | Switch Principal MDF | Switch de Backend | `MDF-Backend` |
-| **Troncal** | Switch Principal MDF | Switch de Rec. Humanos | `MDF-RecursosHumanos` |
-| **Troncal** | Switch Principal MDF | Switch Dir. General | `MDF-DireccionGeneral` |
+### A. Cableado Troncal (Enlaces desde el MDF hacia Switches de Departamento)
+
+| N° | Segmento | Origen (MDF / Data Center) | Destino (Switch de Cuarto) | Etiqueta Aplicada en Plano |
+| :---: | :--- | :--- | :--- | :--- |
+| **1** | Troncal | Switch Principal MDF | Switch Depto. Recepción | `MDF-Recepción` |
+| **2** | Troncal | Switch Principal MDF | Switch Depto. Recursos Humanos | `MDF-RRHH` |
+| **3** | Troncal | Switch Principal MDF | Switch Depto. Legal | `MDF-Legal` |
+| **4** | Troncal | Switch Principal MDF | Switch Sala de Capacitación | `MDF-Capacitación` |
+| **5** | Troncal | Switch Principal MDF | Switch Depto. Diseño e Innovación | `MDF-Diseño` |
+| **6** | Troncal | Switch Principal MDF | Switch Dirección General | `MDF-General` |
+| **7** | Troncal | Switch Principal MDF | Switch Depto. Backend | `MDF-Backend` |
+
+### B. Cableado Horizontal (Enlaces de Equipos Finales hacia Switch Local)
+
+| Departamento / Área | N° Punto | Dispositivo Conectado | Etiqueta Aplicada en Plano |
+| :--- | :---: | :--- | :--- |
+| **Departamento de Recepción** | 1 | PC 1 (Escritorio principal) | `Dep. Recepción-PR01` |
+| | 2 | PC 2 (Escritorio secundario) | `Dep. Recepción-PR02` |
+| | 3 | Laptop 1 | `Dep. Recepción-PR03` |
+| | 4 | Servidor de Recepción | `Dep. Recepción-PR04` |
+| **Departamento de Recursos Humanos** | 1 | PC / Laptop 1 (Mesa superior) | `RRHH-PR01` |
+| | 2 | PC / Laptop 2 (Mesa superior) | `RRHH-PR02` |
+| | 3 | PC / Laptop 3 (Mesa superior) | `RRHH-PR03` |
+| | 4 | PC / Laptop 4 (Mesa superior) | `RRHH-PR04` |
+| | 5 | PC / Laptop 5 (Mesa inferior) | `RRHH-PR05` |
+| | 6 | PC / Laptop 6 (Mesa inferior) | `RRHH-PR06` |
+| | 7 | PC / Laptop 7 (Mesa inferior) | `RRHH-PR07` |
+| | 8 | PC / Laptop 8 (Mesa inferior) | `RRHH-PR08` |
+| **Departamento Legal** | 1 | PC 1 (Pared izquierda superior) | `Legal-PR01` |
+| | 2 | PC 2 (Pared izquierda centro) | `Legal-PR02` |
+| | 3 | PC 3 (Pared izquierda inferior) | `Legal-PR03` |
+| | 4 | PC 4 (Escritorio central) | `Legal-PR04` |
+| **Sala de Capacitación** | 1 | PC Capacitación 1 | `Cap.-PR01` |
+| | 2 | PC Capacitación 2 | `Cap.-PR02` |
+| | 3 | PC Capacitación 3 | `Cap.-PR03` |
+| | 4 | PC Capacitación 4 | `Cap.-PR04` |
+| | 5 | PC Capacitación 5 | `Cap.-PR05` |
+| | 6 | PC Capacitación 6 | `Cap.-PR06` |
+| | 7 | PC Capacitación 7 | `Cap.-PR07` |
+| | 8 | PC Capacitación 8 | `Cap.-PR08` |
+| | 9 | PC / Laptop 9 (Mesa derecha) | `Cap.-PR09` |
+| | 10 | PC / Laptop 10 (Mesa derecha) | `Cap.-PR10` |
+| **Departamento de Diseño e Innovación** | 1 | Servidor de Diseño | `Diseño-PR01` |
+| | 2 | PC / Laptop 2 (Mesa central der.) | `Diseño-PR02` |
+| | 3 | PC / Laptop 3 (Mesa central der.) | `Diseño-PR03` |
+| | 4 | PC / Laptop 4 (Mesa central der.) | `Diseño-PR04` |
+| | 5 | PC / Laptop 5 (Mesa central izq.) | `Diseño-PR05` |
+| | 6 | PC / Laptop 6 (Mesa central izq.) | `Diseño-PR06` |
+| | 7 | PC / Laptop 7 (Mesa central izq.) | `Diseño-PR07` |
+| | 8 | PC / Laptop 8 (Mesa central izq.) | `Diseño-PR08` |
+| **Dirección General** | 1 | PC / Laptop 1 (Escritorio izq.) | `D.General-PR01` |
+| | 2 | PC / Laptop 2 (Mesa reuniones) | `D.General-PR02` |
+| | 3 | PC / Laptop 3 (Mesa reuniones) | `D.General-PR03` |
+| | 4 | PC / Laptop 4 (Mesa reuniones) | `D.General-PR04` |
+| **Departamento de Backend** | 1 | PC / Laptop 1 (Pared inferior) | `Backend-PR01` |
+| | 2 | PC / Laptop 2 (Pared inferior) | `Backend-PR02` |
+| | 3 | PC / Laptop 3 (Pared inferior) | `Backend-PR03` |
+| | 4 | PC / Laptop 4 (Pared inferior) | `Backend-PR04` |
+| | 5 | PC / Laptop 5 (Pared inferior) | `Backend-PR05` |
+| | 6 | PC / Laptop 6 (Escritorio der.) | `Backend-PR06` |
+| | 7 | Servidor de Backend | `Backend-PR07` |
+| **Data Center (MDF)** | 1 | Servidor Principal 1 | `DataCenter-PR01` |
+| | 2 | Servidor Principal 2 | `DataCenter-PR02` |
+| | 3 | Servidor Principal 3 | `DataCenter-PR03` |
 
 ## 14. Comparación con el estándar TIA/EIA-606
 Para esta práctica, utilicé un esquema de etiquetado simplificado y descriptivo (ej. `Legal-PR03` o `MDF-Backend`), el cual es fácil de leer a simple vista. Sin embargo, al investigar el estándar oficial **TIA/EIA-606** (Administración de Infraestructura de Telecomunicaciones), noté que hay diferencias importantes respecto a cómo se haría en una red de clase mundial.
