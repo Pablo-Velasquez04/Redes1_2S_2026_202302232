@@ -60,17 +60,23 @@ A continuación detallo el medio de transmisión que elegí para cada parte de l
 | **Cableado Horizontal** (De las PCs al switch del cuarto) | **Cobre - UTP Categoría 6** | Es el estándar actual para oficinas. Nos da velocidades de hasta 1 Gbps, lo cual es más que suficiente para que las computadoras trabajen rápido. Como las distancias dentro de cada cuarto son muy cortas (mucho menores al límite de 90 metros), este cable funciona perfecto y es económico de instalar. |
 | **Cableado Troncal** (Del switch de cada cuarto al MDF) | **Fibra Óptica (Multimodo OM3)** | Decidí usar fibra óptica para unir los cuartos con el cerebro principal. Como por estos cables va a pasar de golpe toda la información de un departamento entero hacia los servidores principales, necesitamos muchísimo ancho de banda. La fibra evita cuellos de botella y nos asegura que la red no se ponga lenta aunque todos estén descargando cosas al mismo tiempo. |
 
-## 5. Tabla de distancias estimadas y cálculo de bobinas
-Para calcular la cantidad de cable UTP necesario para el cableado horizontal (las líneas verdes), estimé un promedio de metros por cada punto de red dentro de los cuartos. Como el edificio no es tan grande y cada departamento tiene su propio switch, las distancias de cableado son cortas.
+## 5. Tabla de distancias estimadas y cálculo de materiales (UTP y Fibra)
+Para calcular la cantidad de cable necesario, dividí la estimación en dos partes: el cableado horizontal (UTP para las líneas verdes) y el cableado troncal (Fibra Óptica para las líneas rojas). Como el edificio no es tan grande (aprox. 24x23 metros) y cada departamento tiene su propio switch, las distancias de cableado son bastante eficientes.
 
 | Concepto | Cálculo / Valor |
 | :--- | :--- |
-| **Total de puntos de red** | 48 puntos (42 computadoras + 6 servidores). |
-| **Distancia promedio por punto** | 15 metros (contemplando bajadas por la pared y holgura). |
-| **Total de cable horizontal estimado** | 720 metros (48 puntos * 15 metros). |
-| **Metros por bobina estándar** | 305 metros. |
-| **Cálculo de bobinas requeridas** | 720 / 305 = 2.36 bobinas. |
-| **Total a comprar** | **3 bobinas de cable UTP Categoría 6**. |
+| **CABLEADO HORIZONTAL (UTP Cat 6)** | |
+| **Total de puntos de red** | 48 puntos (42 computadoras + 6 servidores)[cite: 4]. |
+| **Distancia promedio por punto** | 15 metros (contemplando bajadas por la pared desde el techo y holgura). |
+| **Total de cable horizontal estimado** | 720 metros (48 puntos * 15 metros)[cite: 4]. |
+| **Metros por bobina estándar** | 305 metros[cite: 4]. |
+| **Cálculo de bobinas requeridas** | 720 / 305 = 2.36 bobinas[cite: 4]. |
+| **Total a comprar (UTP)** | **3 bobinas de cable UTP Categoría 6**[cite: 4]. |
+| **CABLEADO TRONCAL (Fibra Óptica OM3)** | |
+| **Total de enlaces troncales** | 7 enlaces (Del switch MDF hacia los switches de los otros 7 cuartos). |
+| **Distancia promedio por enlace** | 25 metros (recorriendo la escalerilla del pasillo central hasta cada cuarto). |
+| **Total de Fibra Óptica estimada** | 175 metros (7 enlaces * 25 metros) + 25m de margen de seguridad. |
+| **Total a comprar o pedir a medida** | **200 metros de Fibra Óptica (o 7 hilos pre-conectorizados de diversas medidas)**. |
 
 ## 6. Justificación de equipo activo y dimensionamiento
 *   **Switches de departamento:** Se utilizó un switch en cada cuarto para concentrar las conexiones locales. Esto evita tener que tirar 48 cables largos por todo el pasillo.
