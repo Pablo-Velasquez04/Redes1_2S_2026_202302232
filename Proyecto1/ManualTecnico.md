@@ -114,12 +114,21 @@ En los demás switches se utilizó `vtp mode client`.
   > [Insertar aquí la captura de `show spanning-tree` donde se observe el Root Bridge.]
 
 ### 3.3 EtherChannel
-**Protocolo Utilizado:** [Completar después de verificar si se utilizó LACP o PAgP]
+**Protocolo Utilizado:** `LACP`  
+**Justificación del uso:** El carné termina en número par, por lo que la agregación exige LACP. Se utilizó para unir enlaces redundantes y aumentar el ancho de banda sin depender de un solo cable físico.
 
-* **Enlaces agrupados:** [Completar con las interfaces y el número de Port-Channel.]
-* **Justificación técnica:** [Explicar en qué enlaces se aplicó la agregación y por qué se consideró necesario.]
+* **Enlaces agrupados:**
+  * **Port-Channel 1:** `Core_DataCenter` ↔ `SW_Servidores` usando `Gig0/1` y `Gig0/2`.
+  * **Port-Channel 2:** `Core_DataCenter` ↔ `SW1-I+D` usando `Fa0/1-4` en el Core y `Fa0/5-8` en el switch de I+D.
+* **Justificación técnica:** La agregación evita la dependencia de un único enlace, suma capacidad y mantiene el enlace lógico como una sola conexión troncal con VLAN nativa `92`.
 * **Evidencia:**  
-  > [Insertar aquí la captura de `show etherchannel summary`.]
+  ![Imagen](/Proyecto1/Imagenes/etherchannel-summary-core.png)
+
+  ![Imagen](/Proyecto1/Imagenes/etherchannel-summary-i+d.png)
+
+  **Comando de verificación:** `show etherchannel summary`
+
+  En la salida esperada se observan los grupos `Po1` y `Po2` con estado `SU` (Layer2 + In Use), protocolo `LACP` y puertos con estado `P` (participating).
 
 ---
 
@@ -202,10 +211,19 @@ El puerto `Fa0/1` de `Prod_Legacy` se configuró como puerto de acceso en la VLA
 > *Capturas de pantalla ejecutando los comandos de verificación.*
 
 **Prueba: `show spanning-tree`**
-> [Insertar captura pendiente después de configurar y verificar STP.]
+> Comando utilizado para verificar el recálculo de STP después de crear los EtherChannel.
+>
+> ![Imagen](/Proyecto1/Imagenes/stp-recalculo1.png)
+> ![Imagen](/Proyecto1/Imagenes/stp-recalculo2.png)
+> ![Imagen](/Proyecto1/Imagenes/stp-recalculo3.png)
+> ![Imagen](/Proyecto1/Imagenes/stp-recalculo4.png)
 
 **Prueba: `show etherchannel summary`**
-> [Insertar captura pendiente después de configurar y verificar EtherChannel.]
+> Comando utilizado para confirmar la agregación LACP y verificar que los Port-Channel `Po1` y `Po2` quedan activos.
+>
+> ![Imagen](/Proyecto1/Imagenes/etherchannel-summary-core.png)
+>
+> ![Imagen](/Proyecto1/Imagenes/etherchannel-summary-i+d.png)
 
 **Prueba: `show interfaces trunk`**
 > [Insertar captura donde se observe la VLAN nativa 92 en los enlaces troncales.]
@@ -275,7 +293,45 @@ vlan 42
 name Servidores
 vlan 52
 name Visitantes
-interface range [interfaces troncales reales]
+interface range gig0/1-2
+channel-group 1 mode active
+exit
+interface port-channel 1
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+interface range fa0/1-4
+channel-group 2 mode active
+exit
+interface port-channel 2
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+write memory
+```
+
+### `SW_Servidores`
+```ios
+enable
+configure terminal
+interface range gig0/1-2
+channel-group 1 mode active
+exit
+interface port-channel 1
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+write memory
+```
+
+### `SW1-I+D`
+```ios
+enable
+configure terminal
+interface range fa0/5-8
+channel-group 2 mode active
+exit
+interface port-channel 2
 switchport mode trunk
 switchport trunk native vlan 92
 exit
