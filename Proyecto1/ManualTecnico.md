@@ -62,20 +62,29 @@ En esta área, las PCs administrativas se conectan por cable y se distribuyen en
 ## 2. Decisiones de Diseño Físico y Topológico
 
 ### 2.1 Justificación del Diseño y Redundancia
-> *Explicación técnica de las decisiones de topología, ubicación de la redundancia y del enlace de mayor capacidad hacia el Centro de Datos.*
+La red utiliza una topología jerárquica con `Core_DataCenter` como nodo principal del centro de datos. Esta distribución permite concentrar los servicios críticos, aislar los segmentos por área y simplificar la administración de VLANs y protocolos de capa 2. La redundancia se ubicó en los enlaces de agregación entre el núcleo y los switches de acceso y distribución, especialmente entre `Core_DataCenter` y `SW_Servidores`, así como entre `Core_DataCenter` y `SW1-I+D`. Esto evita depender de un único enlace físico para el tráfico de datos del campus.
 
-La red utiliza una organización jerárquica con `Core_DataCenter` como punto central de interconexión. Esta distribución permite separar las áreas de la organización, centralizar los servicios del Centro de Datos y facilitar la administración de la infraestructura.
-
-Los enlaces redundantes y la agregación mediante EtherChannel se documentarán después de verificar cuáles fueron configurados en el archivo de Packet Tracer.
-
-**Pendiente de completar:** describir la ubicación exacta de la redundancia y señalar el enlace de mayor capacidad hacia el Centro de Datos.
+El enlace de mayor capacidad y relevancia en la arquitectura es la conexión del `Core_DataCenter` hacia el segmento de I+D y de Servidores, ya que concentra el tránsito principal de la infraestructura y soporta la agregación de varios puertos mediante `EtherChannel`. El diseño prioriza la disponibilidad del centro de datos y la continuidad del servicio en caso de falla de un enlace físico.
 
 ### 2.2 Medios de Transmisión
-> *Justificación técnica del medio de transmisión elegido (cobre o fibra óptica) para cada enlace, considerando distancia y ancho de banda. (Recuerda que en el archivo de Packet Tracer también deben estar etiquetados).*
+La topología emplea una combinación de cobre UTP y fibra óptica según la función del enlace. Los equipos finales (PCs, laptops, AP y el hub de la Planta de Producción) se conectan mediante cable de cobre, ya que operan a distancias cortas y requieren una solución económica y funcional. En cambio, los enlaces entre switches principales y los enlaces de agregación hacia el centro de datos se apoyan en fibra óptica para aumentar la capacidad de transferencia, reducir interferencias electromagnéticas y mantener una conexión más estable en tramos críticos.
 
-**Pendiente de completar con base en el archivo `.pkt`:** registrar cada enlace, su medio de transmisión y la justificación por distancia, ancho de banda e interferencia.
+En el archivo de Packet Tracer la diferencia entre ambos medios se observa en la forma y apariencia de los enlaces físicos; sin embargo, para dejar evidencia formal en el documento, se documenta la clasificación del cable por tramo en la siguiente tabla.
 
-> [Insertar aquí una captura donde se observen las etiquetas de cobre y fibra óptica en la topología.]
+| Tramo / Segmento | Dispositivos Conectados | Tipo de Conexión | Medio Físico | Justificación Técnica |
+| :--- | :--- | :--- | :--- | :--- |
+| Acceso a PCs y laptops | PC / Laptop ↔ Switch de acceso | **Copper Straight-Through** | **UTP (cobre)** | Distancias cortas, conectividad local de bajo costo y suficiente ancho de banda para equipos finales. |
+| Enlaces entre switches de área | Switch ↔ Switch (línea punteada) | **Copper Cross-Over** | **UTP (cobre)** | Se utiliza para interconexiones directas entre equipos de capa 2 donde se requiere emparejar TX/RX cruzados en el enlace físico. |
+| Conexión del AP al switch | Access Point ↔ Switch del Edificio Corporativo | **Copper Straight-Through** | **UTP (cobre)** | El AP se conecta físicamente al switch mediante un cable de cobre para brindar servicio local a los dispositivos inalámbricos. |
+| Conexión inalámbrica del AP | Access Point ↔ Laptop 1 / Laptop 2 | **Señal Inalámbrica (Wi‑Fi)** | **Wireless** | Las laptops de visitantes se conectan al AP mediante radiofrecuencia, por lo que la comunicación no se realiza por cable físico. |
+| Conexión del hub Legacy | Hub de maquinaria ↔ `Prod_Legacy` | **Copper Straight-Through** | **UTP (cobre)** | El segmento legacy funciona como red compartida con equipos industriales cercanos. |
+| Enlaces de distribución / núcleo | `Core_DataCenter` ↔ `SW_Servidores` | **Fibra óptica** | **Fibra óptica** | Enlace de mayor capacidad y mayor estabilidad para el tráfico central de la red. |
+| Enlaces de agregación | `Core_DataCenter` ↔ `ID_SW1` / `SW1-I+D` | **Fibra óptica** | **Fibra óptica** | Reduce interferencia, agiliza la agregación de tráfico y soporta enlaces de mayor velocidad. |
+| Enlaces entre áreas y core | `Core_DataCenter` ↔ switches de cada área | **Fibra óptica** | **Fibra óptica** | Mantiene el núcleo conectado con mayor rendimiento y continuidad del servicio. |
+
+La imagen visual de la topología se conserva como evidencia gráfica, pero esta tabla es la documentación formal que indica claramente el tipo de medio y la forma de conexión utilizada en cada tramo del diseño, incluyendo el enlace de cobre cruzado, el cobre directo y la conexión inalámbrica del Access Point con las laptops.
+
+> ![Imagen](/Proyecto1/Imagenes/Topología.png)
 
 ---
 
@@ -104,14 +113,37 @@ vtp password proyecto12S2026
 En los demás switches se utilizó `vtp mode client`.
 
 ### 3.2 STP (Spanning Tree Protocol)
-**Versión Utilizada:** [Completar después de verificar la configuración STP en Packet Tracer]
+**Versión Utilizada:** `PVST`  
 
 * **Selección del Root Bridge:**
-  * **VLAN [ID]:** [Completar]
-  * **Switch Root Bridge:** [Completar]
-  * **Justificación técnica:** [Completar según la topología y la salida de `show spanning-tree`.]
+  * **VLAN:** `1, 12, 22, 32, 42, 52, 92`
+  * **Switch Root Bridge:** `Core_DataCenter`
+  * **Justificación técnica:** Se configuró la prioridad del switch central a `4096` para asegurar que sea el puente raíz, centralizar el flujo de datos y evitar bucles. La salida del comando `show spanning-tree summary` confirmaba que `Core_DataCenter` era el Root Bridge para todas las VLANs del dominio.
 * **Evidencia:**  
-  > [Insertar aquí la captura de `show spanning-tree` donde se observe el Root Bridge.]
+  ![Imagen](/Proyecto1/Imagenes/stp-recalculo1.png)
+  ![Imagen](/Proyecto1/Imagenes/stp-recalculo2.png)
+  ![Imagen](/Proyecto1/Imagenes/stp-recalculo3.png)
+  ![Imagen](/Proyecto1/Imagenes/stp-recalculo4.png)
+
+**Comando de verificación:**
+```ios
+show spanning-tree summary
+```
+
+**Salida esperada (verificada):**
+```ios
+Switch is in pvst mode
+Root bridge for: default Gerencia Investigacion Produccion Servidores Visitantes NATIVA
+Extended system ID           is enabled
+Portfast Default             is disabled
+...
+VLAN0012                     0         5        0          6         11
+VLAN0022                     0         5        0          6         11
+VLAN0032                     0         5        0          6         11
+VLAN0042                     0         5        0          6         11
+VLAN0052                     0         5        0          6         11
+VLAN0092                     0         5        0          6         11
+```
 
 ### 3.3 EtherChannel
 **Protocolo Utilizado:** `LACP`  
@@ -186,15 +218,336 @@ Los puertos que conectan switches entre sí permanecen configurados como troncal
 ### 4.4 Tabla de Dominios de Colisión
 > *Identifica cuántos dominios de colisión genera cada switch y cuál es el dominio de colisión compartido.*
 
+En una red Ethernet con switches, cada puerto de acceso se considera un dominio de colisión independiente, salvo cuando varios dispositivos comparten un mismo medio físico en un hub o un segmento half-duplex. En esta topología, el único segmento compartido corresponde al Hub de la Planta de Producción, mientras que los switches segmentan el tráfico con VLANs y evitan la colisión entre subredes.
+
 | Dispositivo | Puertos Activos | Cantidad de Dominios de Colisión Generados |
 | :--- | :---: | :---: |
-| `Core_DataCenter` | [Completar puertos activos] | [Completar] |
-| `SW_Servidores` | Fa0/1-4 y enlaces activos | [Completar según puertos físicos activos] |
-| `ID_SW1`, `ID_SW2`, `ID_SW3` | Fa0/1-3 y enlaces activos | [Completar según puertos físicos activos] |
-| `Corp_AlaA` | Fa0/3, Fa0/4 y enlaces activos | [Completar según puertos físicos activos] |
-| `Corp_AlaB` | Fa0/3 y enlaces activos | [Completar según puertos físicos activos] |
-| `Prod_Legacy` | Fa0/1 y enlaces activos | [Completar según puertos físicos activos] |
-| **Hub-Legacy (Planta Prod.)** | [Completar puertos conectados] | **1 dominio compartido** |
+| `Core_DataCenter` | `Gig0/1-2` + `Fa0/1-4` + enlaces internos activos | **6 puertos activos / 6 dominios de colisión independientes** |
+| `SW_Servidores` | `Fa0/1-4` + uplinks activos | **4 puertos de acceso + enlaces activos** |
+| `ID_SW1`, `ID_SW2`, `ID_SW3` | `Fa0/1-3` + uplinks activos | **3 puertos de acceso por switch + enlaces activos** |
+| `Corp_AlaA` | `Fa0/3`, `Fa0/4` + uplinks activos | **2 puertos de acceso + enlaces activos** |
+| `Corp_AlaB` | `Fa0/3` + uplinks activos | **1 puerto de acceso + enlaces activos** |
+| `Prod_Legacy` | `Fa0/1` + enlaces activos | **1 puerto de acceso + enlaces activos** |
+| **Hub-Legacy (Planta Prod.)** | Puertos conectados a maquinaria | **1 dominio compartido** |
+
+> En síntesis, los switches reducen los dominios de colisión al segmentar cada puerto, mientras que el Hub de la Planta de Producción mantiene un único medio compartido, afectando rendimiento por contención y colisiones.
+
+---
+
+## 5. Análisis del Segmento Legacy (Planta de Producción)
+> *Documentación sobre el impacto que tiene el dominio de colisión compartido en Capa 1 sobre el rendimiento de la red y las medidas de contención aplicadas en el switch de acceso.*
+
+El puerto `Fa0/1` de `Prod_Legacy` se configuró como puerto de acceso en la VLAN `32` y conecta con el Hub de maquinaria Legacy. Los dispositivos conectados al Hub comparten un único dominio de colisión, por lo que pueden producirse colisiones y disminuir el rendimiento, especialmente por el funcionamiento half-duplex del medio compartido. La segmentación mediante la VLAN `32` limita este tráfico al dominio de Producción y reduce su impacto en el resto de la red.
+
+![Imagen](/Proyecto1/Imagenes/legacy-vlan32.png)
+
+---
+
+## 6. Evidencia de Pruebas
+> *Capturas de pantalla ejecutando los comandos de verificación y validando el funcionamiento de la red.*
+
+### 6.1 Prueba de conectividad intra-VLAN
+**Comando a ejecutar:**
+```ios
+ping <IP de otra PC en la misma VLAN>
+```
+
+**Resultado esperado:** respuestas del tipo `Reply from ...` con tiempo en milisegundos.
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/conectividad-intra-vlan.png
+```
+
+![Imagen](/Proyecto1/Imagenes/conectividad-intra-vlan.png)
+
+### 6.2 Prueba de aislamiento inter-VLAN
+**Comando a ejecutar:**
+```ios
+ping <IP de un equipo en otra VLAN>
+```
+
+**Resultado esperado:** cuatro respuestas con `Request timed out`.
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/aislamiento-inter-vlan.png
+```
+
+![Imagen](/Proyecto1/Imagenes/aislamiento-inter-vlan.png)
+
+### 6.3 Validación de STP
+**Comando a ejecutar:**
+```ios
+show spanning-tree
+```
+
+**Resultado esperado:** línea `This bridge is the root` en las VLANs del dominio.
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/stp-root-core.png
+```
+
+![Imagen](/Proyecto1/Imagenes/stp-root-core.png)
+
+### 6.4 Validación de EtherChannel
+**Comando a ejecutar:**
+```ios
+show etherchannel summary
+```
+
+**Resultado esperado:** `Po1` y `Po2` con estado `(SU)` y protocolo `LACP` activo.
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/etherchannel-summary-core.png
+Proyecto1/Imagenes/etherchannel-summary-i+d.png
+```
+
+![Imagen](/Proyecto1/Imagenes/etherchannel-summary-core.png)
+
+![Imagen](/Proyecto1/Imagenes/etherchannel-summary-i+d.png)
+
+### 6.5 Validación de enlaces troncales y VLAN nativa
+**Comando a ejecutar:**
+```ios
+show interfaces trunk
+```
+
+**Resultado esperado:** puertos en `trunking` y `Native vlan` mostrando `92`.
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/show-interfaces-trunk.png
+```
+
+![Imagen](/Proyecto1/Imagenes/show-interfaces-trunk.png)
+
+### 6.6 Verificación del dominio VTP y propagación de VLANs
+**Comando a ejecutar en el servidor:**
+```ios
+show vtp status
+show vlan brief
+```
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/vtp-status-core.png
+Proyecto1/Imagenes/vlan-core.png
+```
+
+![Imagen](/Proyecto1/Imagenes/vtp-status-core.png)
+
+![Imagen](/Proyecto1/Imagenes/vlan-core.png)
+
+**Comando a ejecutar en un cliente VTP:**
+```ios
+show vtp status
+show vlan brief
+```
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/vtp-status-client.png
+Proyecto1/Imagenes/vlan-cliente.png
+```
+
+![Imagen](/Proyecto1/Imagenes/vtp-status-client.png)
+
+![Imagen](/Proyecto1/Imagenes/vlan-cliente.png)
+
+### 6.7 Verificación de puertos de acceso y MOTD
+**Comando a ejecutar:**
+```ios
+show running-config
+show interfaces status
+```
+
+**Lugar para la captura:**
+```text
+Proyecto1/Imagenes/vlan-access-switches.png
+Proyecto1/Imagenes/motd-core.png
+```
+
+![Imagen](/Proyecto1/Imagenes/vlan-access-switches.png)
+
+![Imagen](/Proyecto1/Imagenes/motd-core.png)
+
+---
+
+## 7. Presupuesto
+> *Presupuesto estimado de los equipos físicos simulados.*
+
+| Dispositivo / Material | Cantidad | Descripción | Costo Unitario Estimado | Costo Total |
+| :--- | :---: | :--- | :--- | :--- |
+| Switches Catalyst | 8 | Switches de acceso y distribución con puertos Ethernet/Gigabit | Q 1,200.00 | Q 9,600.00 |
+| Hub | 1 | Hub legacy de la Planta de Producción | Q 180.00 | Q 180.00 |
+| Módulos de Fibra | 4 | SFP/GBIC para enlaces de fibra según la topología | Q 90.00 | Q 360.00 |
+| Cableado UTP | 25 | Cables de cobre para PCs, AP y enlaces locales | Q 25.00 | Q 625.00 |
+| Cableado de Fibra | 6 | Patch cords de fibra para enlaces troncales principales | Q 75.00 | Q 450.00 |
+| **Total General** | | | | **Q 11,215.00** |
+
+> El presupuesto anterior es estimado con fines de documentación y laboratorio; la red simulada en Packet Tracer está basada en equipos Cisco de nivel de acceso y distribución, con enlaces de agregado y segmentos críticos bajo fibra óptica para mayor rendimiento y estabilidad. Todos los valores se expresan en Quetzales (Q).
+
+---
+
+## 8. Lista de Comandos por Dispositivo
+> *Detalle de todos los comandos utilizados en las configuraciones, agrupados por dispositivo.*
+
+### `Core_DataCenter`
+```ios
+enable
+configure terminal
+hostname Core_DataCenter
+banner motd #Acceso Restringido - TechPark_202302232#
+vtp mode server
+vtp domain Smart_3
+vtp password proyecto12S2026
+vlan 92
+name NATIVA
+vlan 12
+name Gerencia
+vlan 22
+name Investigacion
+vlan 32
+name Produccion
+vlan 42
+name Servidores
+vlan 52
+name Visitantes
+spanning-tree mode pvst
+spanning-tree vlan 1,12,22,32,42,52,92 priority 4096
+interface range gig0/1-2
+channel-group 1 mode active
+exit
+interface port-channel 1
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+interface range fa0/1-4
+channel-group 2 mode active
+exit
+interface port-channel 2
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+write memory
+```
+
+### `SW_Servidores`
+```ios
+enable
+configure terminal
+hostname SW_Servidores
+banner motd #Acceso Restringido - TechPark_202302232#
+vtp mode client
+vtp domain Smart_3
+vtp password proyecto12S2026
+spanning-tree mode pvst
+interface range gig0/1-2
+channel-group 1 mode active
+exit
+interface port-channel 1
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+interface range fa0/1-4
+switchport mode access
+switchport access vlan 42
+exit
+write memory
+```
+
+### `SW1-I+D`
+```ios
+enable
+configure terminal
+hostname ID_SW1
+banner motd #Acceso Restringido - TechPark_202302232#
+vtp mode client
+vtp domain Smart_3
+vtp password proyecto12S2026
+spanning-tree mode pvst
+interface range fa0/5-8
+channel-group 2 mode active
+exit
+interface port-channel 2
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+write memory
+```
+
+### `ID_SW2`, `ID_SW3`, `Corp_AlaA`, `Corp_AlaB` y `Prod_Legacy`
+```ios
+enable
+configure terminal
+hostname [nombre correspondiente]
+banner motd #Acceso Restringido - TechPark_202302232#
+vtp mode client
+vtp domain Smart_3
+vtp password proyecto12S2026
+spanning-tree mode pvst
+interface [interfaz troncal real]
+switchport mode trunk
+switchport trunk native vlan 92
+exit
+write memory
+```
+
+> Nota: sustituir los valores entre corchetes por los nombres e interfaces realmente usados en cada switch. El bloque de comandos puede ser reutilizado en todos los clientes que forman parte del dominio VTP.
+
+### Asignación de puertos de acceso
+
+#### `SW_Servidores` - VLAN 42
+```ios
+interface range fa0/1-4
+switchport mode access
+switchport access vlan 42
+exit
+write memory
+```
+
+#### `ID_SW1`, `ID_SW2` e `ID_SW3` - VLAN 22
+```ios
+interface range fa0/1-3
+switchport mode access
+switchport access vlan 22
+exit
+write memory
+```
+
+#### `Corp_AlaA` - VLAN 12 y VLAN 52
+```ios
+interface fa0/4
+switchport mode access
+switchport access vlan 12
+exit
+interface fa0/3
+switchport mode access
+switchport access vlan 52
+exit
+write memory
+```
+
+#### `Corp_AlaB` - VLAN 12
+```ios
+interface fa0/3
+switchport mode access
+switchport access vlan 12
+exit
+write memory
+```
+
+#### `Prod_Legacy` - VLAN 32
+```ios
+interface fa0/1
+switchport mode access
+switchport access vlan 32
+exit
+write memory
+```
 
 ---
 
@@ -226,7 +579,6 @@ El puerto `Fa0/1` de `Prod_Legacy` se configuró como puerto de acceso en la VLA
 > ![Imagen](/Proyecto1/Imagenes/etherchannel-summary-i+d.png)
 
 **Prueba: `show interfaces trunk`**
-> [Insertar captura donde se observe la VLAN nativa 92 en los enlaces troncales.]
 
 **Verificación de VLANs en el servidor VTP:**
 ```ios
@@ -260,12 +612,14 @@ show vlan brief
 
 | Dispositivo / Material | Cantidad | Descripción | Costo Unitario Estimado | Costo Total |
 | :--- | :---: | :--- | :--- | :--- |
-| Switches | 8 | [Modelo utilizado] | [Costo] | [Total] |
-| Hub | 1 | [Modelo utilizado] | [Costo] | [Total] |
-| Módulos de Fibra | [Completar] | [SFP Transceiver, si aplica] | [Costo] | [Total] |
-| Cableado UTP | [Completar] | [Bobina o cantidad de cables] | [Costo] | [Total] |
-| Cableado de Fibra | [Completar] | [Patch cord multimodo, si aplica] | [Costo] | [Total] |
-| **Total General** | | | | **[Total Final]** |
+| Switches Catalyst | 8 | Switches de acceso y distribución con puertos Ethernet/Gigabit | Q 1,200.00 | Q 9,600.00 |
+| Hub | 1 | Hub legacy de la Planta de Producción | Q 180.00 | Q 180.00 |
+| Módulos de Fibra | 4 | SFP/GBIC para enlaces de fibra según la topología | Q 90.00 | Q 360.00 |
+| Cableado UTP | 25 | Cables de cobre para PCs, AP y enlaces locales | Q 25.00 | Q 625.00 |
+| Cableado de Fibra | 6 | Patch cords de fibra para enlaces troncales principales | Q 75.00 | Q 450.00 |
+| **Total General** | | | | **Q 11,215.00** |
+
+> El presupuesto anterior es estimado con fines de documentación y laboratorio; la red simulada en Packet Tracer está basada en equipos Cisco de nivel de acceso y distribución, con enlaces de agregado y segmentos críticos bajo fibra óptica para mayor rendimiento y estabilidad. Todos los valores se expresan en Quetzales (Q).
 
 ---
 
