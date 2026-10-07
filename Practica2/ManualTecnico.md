@@ -186,3 +186,92 @@ Por lo tanto, si la topología final conecta, por ejemplo, **157 hosts finales**
 Esta micro-segmentación es sumamente adecuada y vital para el complejo Cayalá. Al tener un dominio de colisión por puerto, se elimina la posibilidad de colisiones de red (operando en **full-duplex**), lo cual garantiza que zonas de alto tráfico como el **Distrito Empresarial (Zona 1)** o la **Zona Gastronómica (Zona 4)** tengan un ancho de banda dedicado por dispositivo.
 
 Esto es crucial para que los sistemas de **punto de venta (POS)** y las **transacciones financieras** no sufran latencia ni pérdida de paquetes por contención del medio.
+
+# Configuración del Backbone y Agregación de Enlaces (EtherChannel LACP)
+
+Para la interconexión de alta velocidad y alta disponibilidad entre el núcleo de la red (`SW_CORE_1` y `SW_CORE_2`) y la Zona 1 (`SW_Z1_Principal`), se implementó la técnica de agregación de enlaces **EtherChannel** operando bajo el protocolo estándar **LACP (IEEE 802.3ad)**, en cumplimiento con el requerimiento de número de carnet finalizado en dígito par.
+
+---
+
+## Tabla de Interfaces y Agregación LACP
+
+| **Identificador** | **Switch Origen** | **Interfaces Físicas** | **Switch Destino** | **Interfaces Destino** | **Protocolo / Modo** | **Rol / Función** |
+|---|---|---|---|---|---|---|
+| Port-Channel 1 | SW_CORE_1 | Fa0/23, Fa0/24 | SW_CORE_2 | Fa0/23, Fa0/24 | LACP (active) | Redundancia y troncalización del Núcleo (Core ↔ Core) |
+| Port-Channel 2 | SW_CORE_1 | Gig0/1, Gig0/2 | SW_Z1_Principal | Gig0/1, Gig0/2 | LACP (active) | Troncal de Alta Disponibilidad (Core 1 ↔ Zona 1) |
+
+---
+
+## Parámetros de Troncalización en Port-Channels
+
+| **Parámetro** | **Configuración** |
+|---|---|
+| **Modo Troncal** | Habilitado explícitamente (`switchport mode trunk`). |
+| **Encapsulación** | 802.1Q (`switchport trunk encapsulation dot1q` en switches 3560). |
+| **VLAN Nativa** | VLAN 99 (ADMIN) configurada para aislar el tráfico de administración. |
+| **Poda y Seguridad de VLANs** | Se restringió el paso de tráfico aplicando únicamente las VLANs necesarias (`switchport trunk allowed vlan 12,22,32,42,52,99`), evitando la propagación innecesaria mediante la exclusión del parámetro `allow all`. |
+
+---
+
+## Comandos CLI de Referencia Aplicados
+
+### SW_CORE_1
+
+```bash
+interface range FastEthernet0/23 - 24
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ channel-group 1 mode active
+exit
+
+interface port-channel 1
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+```
+
+### SW_CORE_2 - Switch 3560
+
+```bash
+! Configurar interfaces físicas Fa0/23-24 y asociar al Port-Channel 1 (Hacia Core 1)
+interface range FastEthernet0/23 - 24
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ channel-group 1 mode active
+exit
+
+! Configuración de la interfaz lógica Port-Channel 1
+interface port-channel 1
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+```
+
+### SW_Z1_Principal - Switch 2960
+
+```bash
+! Configurar interfaces físicas Gig0/1-2 y asociar al Port-Channel 2 (Hacia Core 1)
+interface range GigabitEthernet0/1 - 2
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ channel-group 2 mode active
+exit
+
+! Configuración de la interfaz lógica Port-Channel 2
+interface port-channel 2
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+-- Nota: En el switch 2960 SW_Z1_Principal no se incluye la orden encapsulation dot1q porque los switches de Capa 2 de esta serie solo soportan el estándar 802.1Q de forma nativa.
+```
