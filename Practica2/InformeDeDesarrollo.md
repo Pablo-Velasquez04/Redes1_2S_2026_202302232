@@ -76,3 +76,47 @@ Se crearon las VLANs administrativas de soporte (VLAN 99) y se establecieron los
 ![Captura de pantalla de la CLI ejecutando show interfaces trunk](Imagenes/interfacesTrunk1.png)
 
 **Descripción de la evidencia:** Demuestra la presencia de las interfaces lógicas Po1 y Po2 operando bajo encapsulación 802.1q, con la VLAN Nativa asignada a la 99 y restringiendo el tráfico de datos estrictamente a las VLANs 12, 22, 32, 42, 52, 99.
+
+
+# Despliegue de Enlaces Troncales de Acceso y Distribución
+
+## 1. Descripción de la Implementación
+
+Se procedió con la configuración de las interfaces troncales entre los switches de distribución y acceso de todas las zonas de Ciudad Cayalá. Se aseguró que cada enlace mantuviera la coherencia en la VLAN Nativa (VLAN 99) y en la lista de VLANs autorizadas para evitar discrepancias de tráfico a nivel de Capa 2.
+
+---
+
+## 2. Problemas Encontrados y Soluciones Adoptadas
+
+### Problema: Puerto en estado de bloqueo temporal (Luz Naranja) entre SW_CORE_1 y SW_Z4_Principal
+
+| **Aspecto** | **Descripción** |
+|---|---|
+| **Inconveniente** | Al aplicar la configuración de tronco en la interfaz Fa0/15 de SW_CORE_1, el enlace se mantuvo en color naranja por varios segundos, impidiendo la transmisión inmediata. |
+| **Solución Adoptada** | Se identificó que el puerto se encontraba en el proceso estándar de convergencia de Spanning Tree (Listening / Learning). Se avanzó el tiempo en el simulador (Fast Forward Time) para permitir que el estado cambiara a Forwarding (luz verde). |
+
+### Problema: Estado `none` en las secciones de VLANs activas de `show interfaces trunk`
+
+| **Aspecto** | **Descripción** |
+|---|---|
+| **Inconveniente** | Al verificar los troncales en SW_Z4_Principal, las secciones `Vlans allowed and active` y `Vlans in spanning tree forwarding state` mostraban `none`. |
+| **Solución Adoptada** | Se confirmó que esto es un comportamiento normal de la Capa 2 cuando las VLANs aún no existen localmente en la base de datos del switch ni se han propagado por VTP. Se verificó que la línea `Vlans allowed on trunk` mostrara correctamente `12,22,32,42,52,99`, validando que la sintaxis del tronco estaba correctamente aplicada a la espera de la creación de las VLANs. |
+
+---
+
+## 3. Capturas de Pantalla y Evidencias de Funcionamiento
+
+### Imagen 1: `show interfaces trunk` en SW_Z4_Principal
+
+![Captura de la CLI de SW_Z4_Principal ejecutando show interfaces trunk](Imagenes/sw_z4_show_interfaces_trunk.png)
+
+**Descripción de la evidencia:** Muestra las interfaces Fa0/1, Fa0/2 y Fa0/24 operando en modo trunking bajo encapsulación 802.1q, confirmando que la VLAN Nativa está asignada a la 99 y que únicamente las VLANs 12, 22, 32, 42, 52, 99 están permitidas.
+
+### Imagen 2: `show interfaces trunk` en SW_Z1_Principal
+
+![Captura de la CLI de SW_Z1_Principal ejecutando show interfaces trunk](Imagenes/sw_z1_show_interfaces_trunk.png)
+
+**Descripción de la evidencia:** Demuestra los enlaces troncales activos hacia los switches de acceso (Fa0/1, Fa0/2, Fa0/3) y el canal Po2 hacia el Core, confirmando que la VLAN 99 figura como activa en el dominio de administración.
+
+
+

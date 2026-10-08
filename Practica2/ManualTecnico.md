@@ -273,5 +273,207 @@ interface port-channel 2
  switchport trunk allowed vlan 12,22,32,42,52,99
 exit
 
--- Nota: En el switch 2960 SW_Z1_Principal no se incluye la orden encapsulation dot1q porque los switches de Capa 2 de esta serie solo soportan el estándar 802.1Q de forma nativa.
+! Nota: En el switch 2960 SW_Z1_Principal no se incluye la orden encapsulation dot1q porque los switches de Capa 2 de esta serie solo soportan el estándar 802.1Q de forma nativa.
+```
+
+# Paso 2: Levantamiento de la Infraestructura de Enlaces Troncales
+
+El presente paso define la configuración de los enlaces troncales restantes dentro de la topología, con la finalidad de permitir la propagación de las VLAN 12, 22, 32, 42, 52 y la VLAN nativa 99. La estructura resultante garantiza la segmentación lógica requerida y la interoperabilidad entre los switches del núcleo, distribución y acceso.
+
+---
+
+## 1. Troncales desde el núcleo
+
+La siguiente configuración se aplica en los switches de núcleo para habilitar los enlaces de interconexión hacia las zonas de servicio y acceso.
+
+### 1.1 SW_CORE_1 (Switch 3560)
+
+Se habilitan los troncales hacia la Zona 2, la Zona 4 y la Zona 5:
+
+```bash
+enable
+configure terminal
+
+interface range FastEthernet0/10, FastEthernet0/15, FastEthernet0/22
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+### 1.2 SW_CORE_2 (Switch 3560)
+
+Se habilitan los troncales hacia la Zona 3 y la Zona 5:
+
+```bash
+enable
+configure terminal
+
+interface range FastEthernet0/10, FastEthernet0/21
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+---
+
+## 2. Troncales internos de la Zona 1
+
+En la Zona 1, SW_Z1_Principal actúa como dispositivo de distribución hacia los switches de acceso.
+
+### 2.1 SW_Z1_Principal (Switch 2960)
+
+```bash
+enable
+configure terminal
+
+interface range FastEthernet0/1 - 3
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+### 2.2 SW_Z1_Acceso1, SW_Z1_Acceso2 y SW_Z1_Acceso3 (Switches 2960)
+
+Para cada switch de acceso de la Zona 1, se configura el enlace de retorno hacia SW_Z1_Principal:
+
+```bash
+enable
+configure terminal
+
+interface FastEthernet0/1
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+---
+
+## 3. Troncales de las zonas 2, 3, 4 y 5
+
+### 3.1 SW_Z2_Retail (Switch 2960)
+
+```bash
+enable
+configure terminal
+
+interface FastEthernet0/24
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+### 3.2 SW_Z3_Cine (Switch 2960)
+
+```bash
+enable
+configure terminal
+
+interface FastEthernet0/24
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+### 3.3 SW_Z4_Principal (Switch 2960)
+
+Se habilita el enlace hacia el núcleo y los enlaces hacia los switches de acceso:
+
+```bash
+enable
+configure terminal
+
+interface range FastEthernet0/1 - 2, FastEthernet0/24
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+### 3.4 SW_Z4_Acceso1 y SW_Z4_Acceso2 (Switches 2960)
+
+Se configura el enlace de retorno hacia SW_Z4_Principal en ambos switches de acceso:
+
+```bash
+enable
+configure terminal
+
+interface FastEthernet0/1
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+### 3.5 SW_Z5_Seguridad (Switch 2960)
+
+Se habilitan los enlaces redundantes hacia ambos switches núcleo:
+
+```bash
+enable
+configure terminal
+
+interface range FastEthernet0/23 - 24
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+exit
+
+end
+write memory
+```
+
+---
+
+## 4. Verificación del funcionamiento
+
+Para verificar la correcta activación de los enlaces troncales, se ejecuta el siguiente comando en cualquier switch del dominio de capa 2:
+
+```bash
+show interfaces trunk
+```
+### Resultado en SW_Z1_Principal
+
+![Captura de la CLI de SW_Z1_Principal ejecutando show interfaces trunk](Imagenes/sw_z1_show_interfaces_trunk.png)
+
+**Descripción de la evidencia:** Demuestra los enlaces troncales activos hacia los switches de acceso (Fa0/1, Fa0/2, Fa0/3) y el canal Po2 hacia el Core, confirmando que la VLAN 99 figura como activa en el dominio de administración.
+
+### Resultado esperado
+
+- La columna Port debe mostrar los interfaces físicos activos en modo trunk.
+- La columna Mode debe indicar `on`.
+- La columna Encapsulation debe mostrar `802.1q`.
+- La columna Native vlan debe corresponder a `99`.
+- La columna Vlans allowed on trunk debe reflejar únicamente: `12,22,32,42,52,99`.
 ```
