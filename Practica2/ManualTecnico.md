@@ -276,7 +276,7 @@ exit
 ! Nota: En el switch 2960 SW_Z1_Principal no se incluye la orden encapsulation dot1q porque los switches de Capa 2 de esta serie solo soportan el estándar 802.1Q de forma nativa.
 ```
 
-# Paso 2: Levantamiento de la Infraestructura de Enlaces Troncales
+# Levantamiento de la Infraestructura de Enlaces Troncales
 
 El presente paso define la configuración de los enlaces troncales restantes dentro de la topología, con la finalidad de permitir la propagación de las VLAN 12, 22, 32, 42, 52 y la VLAN nativa 99. La estructura resultante garantiza la segmentación lógica requerida y la interoperabilidad entre los switches del núcleo, distribución y acceso.
 
@@ -476,4 +476,140 @@ show interfaces trunk
 - La columna Encapsulation debe mostrar `802.1q`.
 - La columna Native vlan debe corresponder a `99`.
 - La columna Vlans allowed on trunk debe reflejar únicamente: `12,22,32,42,52,99`.
+
+# Configuración de VTP (Dominio 202302232, Servidores y Clientes).   
+
+## 1. Configuración del protocolo VTP
+
+El protocolo VTP permite centralizar la administración de VLANs desde un switch servidor. Para este caso, se configura un dominio común con el carnet del estudiante y una contraseña compartida, de modo que los switches clientes reciban automáticamente las VLANs definidas en el servidor principal.
+
+### 1.1. Configuración de los switches servidores (VTP Server)
+
+Por defecto, todos los switches inician en modo servidor, pero es recomendable forzarlo explícitamente para asegurar el rol, además de definir el dominio y una contraseña de seguridad.
+
+Abre la CLI de SW_CORE_1 y de los switches principales de cada zona (SW_Z1_Principal, SW_Z2_Retail, SW_Z3_Cine, SW_Z4_Principal y SW_Z5_Seguridad), y ejecuta el siguiente bloque en cada uno:
+
+```bash
+enable
+configure terminal
+
+vtp domain 202302232
+vtp password redes1
+vtp mode server
+
+end
+write memory
 ```
+
+> Nota: al ingresar el dominio, la consola mostrará un mensaje confirmando el cambio de estado de `NULL` a `202302232`.
+
+### 1.2. Configuración de los switches clientes (VTP Client)
+
+Los switches en modo cliente no pueden crear, eliminar ni modificar VLANs; únicamente reciben las actualizaciones del servidor y las aplican a su base de datos local.
+
+Abre la CLI del Core de respaldo (SW_CORE_2) y de todos los switches de acceso (SW_Z1_Acceso1, SW_Z1_Acceso2, SW_Z1_Acceso3, SW_Z4_Acceso1, SW_Z4_Acceso2), e ingresa este bloque de comandos:
+
+```bash
+enable
+configure terminal
+
+vtp domain 202302232
+vtp password redes1
+vtp mode client
+
+end
+write memory
+```
+
+### Verificación de la configuración
+
+Para comprobar que la configuración fue exitosa, accede a cualquier switch cliente (por ejemplo, SW_CORE_2 o SW_Z1_Acceso1) y ejecuta el siguiente comando en modo privilegiado:
+
+```bash
+show vtp status
+```
+
+### Resultado esperado
+
+- `VTP Version Capable`: debe indicar `1 to 2` o `1 to 3`.
+- `VTP Operating Mode`: debe mostrar `Client`.
+- `VTP Domain Name`: debe mostrar `202302232`.
+- `Configuration Revision`: en este punto debe estar en `0`; este valor aumentará cuando se creen las VLANs en el siguiente paso.
+- 
+![Captura de la CLI de SW_CORE_2 con show vtp status](Imagenes/core2_showVTPstatus1.png)
+
+Este procedimiento garantiza que el dominio VTP quede correctamente definido y que todos los switches clientes queden sincronizados con el servidor principal.
+
+
+# Configuración de la Base de Datos Global de VLANs
+
+Para estructurar la red del proyecto y aislar los dominios de difusión por cada zona de la Ciudad Comercial Cayalá, se definieron 7 VLANs globales en la base de datos central del switch SW_CORE_1. Gracias al protocolo VTP en el dominio 202302232, la creación de estas entidades se propagó automáticamente hacia los switches servidores y clientes de la topología.
+
+## Matriz Definitiva de Segmentación por VLAN
+
+| VLAN ID | Nombre de VLAN | Zona / Propósito | Rango IP Asignado (VLSM) | Estado |
+|---|---|---|---|---|
+| 12 | Z1_Bancos | Zona 1: Distrito Empresarial (Bancos) | 192.168.10.0/26 | Active |
+| 22 | Z2_Retail | Zona 2: Comercio Retail | 192.168.10.128/27 | Active |
+| 32 | Z3_Cine | Zona 3: Entretenimiento (Cine) | 192.168.10.160/28 | Active |
+| 42 | Z4_Food | Zona 4: Gastronomía Fast-Food | 192.168.10.64/26 | Active |
+| 52 | Z5_Seguridad | Zona 5: Amenidades / Seguridad | 192.168.10.176/28 | Active |
+| 99 | ADMIN | VLAN Nativa / Tráfico de Gestión | 192.168.10.192/28 | Active |
+| 999 | BLACKHOLE | Seguridad (Aislamiento de Puertos Inactivos) | N/A (Sin IP) | Active |
+
+## Comandos CLI de Referencia Aplicados (SW_CORE_1)
+
+```bash
+enable
+configure terminal
+
+vlan 12
+ name Z1_Bancos
+vlan 22
+ name Z2_Retail
+vlan 32
+ name Z3_Cine
+vlan 42
+ name Z4_Food
+vlan 52
+ name Z5_Seguridad
+vlan 99
+ name ADMIN
+vlan 999
+ name BLACKHOLE
+exit
+end
+write memory
+```
+
+
+# Configuración de Spanning Tree Protocol (Rapid PVST+ / IEEE 802.1w) y Prioridades de Puente Raíz
+
+Para prevenir bucles de conmutación en la Capa 2 (bucles de difusión) y garantizar tiempos de convergencia ultra rápidos ante cualquier eventualidad o fallo físico en los enlaces, se implementó el protocolo **Rapid Per-VLAN Spanning Tree Plus (Rapid PVST+)** en la totalidad de los switches de la topología.
+
+Se determinó una jerarquía determinista para la selección del **Root Bridge (Puente Raíz)**, distribuyendo las prioridades de la siguiente manera:
+
+## Tabla de Jerarquía y Prioridades Spanning Tree
+
+| Dispositivo | Rol Spanning Tree | Prioridad Base Configurada | Prioridad Calculada (VLAN 12) | Estado del Dispositivo |
+|---|---|---|---|---|
+| SW_CORE_1 | Root Bridge Primario | 4096 | 4108 (4096 + 12) | Root Principal (Todos sus puertos en estado Desg FWD) |
+| SW_CORE_2 | Root Bridge Secundario (Backup) | 8192 | 8204 (8192 + 12) | Backup Root (Acepta SW_CORE_1 vía Po1) |
+| Switches de Distribución / Acceso | Nodos Clientes STP | 32768 (Por defecto) | 32780 (32768 + 12) | Nodos Hoja (Apuntan su Root Port hacia la jerarquía Core) |
+
+## Comandos CLI de Referencia Aplicados
+
+```bash
+! En SW_CORE_1 (Root Bridge Primario)
+spanning-tree mode rapid-pvst
+spanning-tree vlan 12,22,32,42,52,99 priority 4096
+
+! En SW_CORE_2 (Root Bridge Secundario)
+spanning-tree mode rapid-pvst
+spanning-tree vlan 12,22,32,42,52,99 priority 8192
+
+! En Switches de Distribución y Acceso
+spanning-tree mode rapid-pvst
+```
+
+
