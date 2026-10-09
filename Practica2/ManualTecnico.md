@@ -151,6 +151,8 @@ Para el diseño de la red del complejo Cayalá, se implementó una **topología 
 | 4 | Zona Gastronómica Fast-Food | Estrella Simple | No | No |
 | 5 | Amenidades, Parqueos y Seguridad | Malla Parcial | Sí | No |
 
+# Topología resultante
+![Captura de la topologia](Imagenes/Topología.png)
 
 # 2. Esquema de Direccionamiento IP (VLSM)
 

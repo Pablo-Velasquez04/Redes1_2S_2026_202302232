@@ -34,6 +34,8 @@
 
 # Informe De Desarrollo - Red de la Ciudad Comercial Cayalá
 
+## Topología 
+![Captura de la topologia](Imagenes/Topología.png)
 
 # Fase 1: Implementación del Backbone, Enlaces Troncales y EtherChannel
 
