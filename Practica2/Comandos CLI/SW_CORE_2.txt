@@ -1,0 +1,138 @@
+hostname SW_CORE_2
+!
+!
+no profinet
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+spanning-tree mode rapid-pvst
+spanning-tree vlan 12,22,32,42,52,99 priority 8192
+!
+!
+!
+!
+!
+!
+interface Port-channel1
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+!
+interface FastEthernet0/1
+!
+interface FastEthernet0/2
+!
+interface FastEthernet0/3
+!
+interface FastEthernet0/4
+!
+interface FastEthernet0/5
+!
+interface FastEthernet0/6
+!
+interface FastEthernet0/7
+!
+interface FastEthernet0/8
+!
+interface FastEthernet0/9
+!
+interface FastEthernet0/10
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+!
+interface FastEthernet0/11
+!
+interface FastEthernet0/12
+!
+interface FastEthernet0/13
+!
+interface FastEthernet0/14
+!
+interface FastEthernet0/15
+!
+interface FastEthernet0/16
+!
+interface FastEthernet0/17
+!
+interface FastEthernet0/18
+!
+interface FastEthernet0/19
+!
+interface FastEthernet0/20
+!
+interface FastEthernet0/21
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+!
+interface FastEthernet0/22
+!
+interface FastEthernet0/23
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ channel-group 1 mode active
+!
+interface FastEthernet0/24
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 12,22,32,42,52,99
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ channel-group 1 mode active
+!
+interface GigabitEthernet0/1
+!
+interface GigabitEthernet0/2
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan99
+ mac-address 0002.1686.3401
+ ip address 192.168.10.194 255.255.255.240
+!
+ip default-gateway 192.168.10.193
+ip classless
+!
+ip flow-export version 9
+!
+!
+!
+!
+!
+!
+!
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+!
+end

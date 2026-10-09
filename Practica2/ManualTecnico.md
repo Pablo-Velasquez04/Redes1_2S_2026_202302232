@@ -613,3 +613,146 @@ spanning-tree mode rapid-pvst
 ```
 
 
+# Asignación de Puertos de Acceso y Seguridad de Red (VLAN 999 Blackhole)
+
+Para completar el esquema de conmutación de Capa 2 y garantizar la seguridad física de los switches de acceso, se aplicaron dos políticas fundamentales en todas las zonas de la red:
+
+## Configuración de Puertos de Acceso y Optimización con PortFast
+
+Los puertos conectados directamente a estaciones de trabajo (PCs) se asignaron explícitamente a su respectiva VLAN de zona en modo `access`. Adicionalmente, se habilitó el parámetro `spanning-tree portfast`, permitiendo que las interfaces pasen inmediatamente al estado de reenvío (Forwarding) sin atravesar los estados de transición de Spanning Tree (Listening/Learning), optimizando el tiempo de conexión de los clientes.
+
+## Hardening de Puertos No Utilizados (VLAN 999 - Blackhole)
+
+Como medida de mitigación frente a accesos no autorizados a la infraestructura física, todos los puertos que no cumplen funciones de enlace troncal ni están asignados a terminales finales fueron reubicados en la VLAN 999 (BLACKHOLE) y desactivados administrativamente mediante la orden `shutdown`.
+
+## Matriz de Asignación de Puertos y Seguridad por Switch de Acceso (Ejemplo Zona 4)
+
+| Switch | Interfaz | Modo de Puerto | VLAN Asignada | Función / Estado |
+|---|---|---|---|---|
+| SW_Z4_Acceso1 | Fa0/1 | Trunk (802.1Q) | Native 99 / Allowed 12,22,32,42,52,99 | Enlace de enlace ascendente hacia SW_Z4_Principal |
+| SW_Z4_Acceso1 | Fa0/2 – Fa0/3 | Access | VLAN 42 (Z4_Food) | Conexión a clientes (PC24, PC25) con PortFast activo |
+| SW_Z4_Acceso1 | Fa0/4 – Fa0/24, Gig0/1 – Gig0/2 | Access | VLAN 999 (BLACKHOLE) | Puertos inactivos / Aislados administrativamente (shutdown) |
+
+## Comandos CLI de Referencia Aplicados (SW_Z4_Acceso1)
+
+```bash
+enable
+configure terminal
+
+! Asignación de puertos de acceso a terminales de usuario
+interface range FastEthernet0/2 - 3
+ switchport mode access
+ switchport access vlan 42
+ spanning-tree portfast
+exit
+
+! Aseguramiento de puertos no utilizados (VLAN Blackhole)
+interface range FastEthernet0/4 - 24, GigabitEthernet0/1 - 2
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+exit
+
+end
+write memory
+```
+
+
+# Enrutamiento Inter-VLAN, Direccionamiento IP y Gestión
+
+Para habilitar la comunicación entre las distintas zonas de la Ciudad Comercial Cayalá manteniendo el aislamiento de broadcast de Capa 2, se activó la función de enrutamiento IP de Capa 3 (`ip routing`) en el switch multicapa central SW_CORE_1 (Cisco Catalyst 3560). Se configuraron Interfaces Virtuales de Switch (SVIs) para cada VLAN, actuando como las puertas de enlace predeterminadas (Default Gateways) de toda la topología.
+
+## Tabla Definitiva de Esquema de Direccionamiento IP (VLSM)
+
+| Zona / Segmento | VLAN | Subred Base | Máscara de Subred | Default Gateway (SVI Core 1) | Rango IP de Hosts / Dispositivos |
+|---|---|---|---|---|---|
+| Zona 1: Bancos | 12 | 192.168.10.0/26 | 255.255.255.192 | 192.168.10.1 | 192.168.10.2 – 192.168.10.62 |
+| Zona 4: Fast-Food | 42 | 192.168.10.64/26 | 255.255.255.192 | 192.168.10.65 | 192.168.10.66 – 192.168.10.126 |
+| Zona 2: Retail | 22 | 192.168.10.128/27 | 255.255.255.224 | 192.168.10.129 | 192.168.10.130 – 192.168.10.158 |
+| Zona 3: Cine | 32 | 192.168.10.160/28 | 255.255.255.240 | 192.168.10.161 | 192.168.10.162 – 192.168.10.174 |
+| Zona 5: Seguridad | 52 | 192.168.10.176/28 | 255.255.255.240 | 192.168.10.177 | 192.168.10.178 – 192.168.10.190 |
+| Administración | 99 | 192.168.10.192/28 | 255.255.255.240 | 192.168.10.193 | 192.168.10.194 – 192.168.10.206 |
+| Blackhole | 999 | N/A | N/A | Sin Enrutamiento | N/A (Aislamiento Total) |
+
+## Comandos CLI de Referencia Aplicados (SW_CORE_1)
+
+```bash
+enable
+configure terminal
+
+! Activación del motor de enrutamiento
+ip routing
+
+! SVIs para Enrutamiento Inter-VLAN
+interface Vlan 12
+ description Gateway Z1 Bancos
+ ip address 192.168.10.1 255.255.255.192
+ no shutdown
+exit
+
+interface Vlan 22
+ description Gateway Z2 Retail
+ ip address 192.168.10.129 255.255.255.224
+ no shutdown
+exit
+
+interface Vlan 32
+ description Gateway Z3 Cine
+ ip address 192.168.10.161 255.255.255.240
+ no shutdown
+exit
+
+interface Vlan 42
+ description Gateway Z4 Fast-Food
+ ip address 192.168.10.65 255.255.255.192
+ no shutdown
+exit
+
+interface Vlan 52
+ description Gateway Z5 Seguridad
+ ip address 192.168.10.177 255.255.255.240
+ no shutdown
+exit
+
+interface Vlan 99
+ description Gateway ADMIN
+ ip address 192.168.10.193 255.255.255.240
+ no shutdown
+exit
+
+end
+write memory
+```
+
+
+
+### Análisis de Dominios de Colisión y Difusión
+
+En la topología implementada para la Ciudad Comercial Cayalá, la segmentación de la red se analiza bajo dos esquemas fundamentales de la Capa de Enlace de Datos:
+
+1. **Dominios de Difusión (Broadcast Domains):**
+   * **Cantidad Total:** 7 Dominios de Difusión.
+   * **Delimitación:** Están delimitados en la Capa 3 por las Interfaces Virtuales de Switch (SVIs) del switch multicapa `SW_CORE_1`.
+   * **Desglose:**
+     * VLAN 12 (Zona 1 - Bancos): `192.168.10.0/26`
+     * VLAN 22 (Zona 2 - Retail): `192.168.10.128/27`
+     * VLAN 32 (Zona 3 - Cine): `192.168.10.160/28`
+     * VLAN 42 (Zona 4 - Fast-Food): `192.168.10.64/26`
+     * VLAN 52 (Zona 5 - Seguridad): `192.168.10.176/28`
+     * VLAN 99 (Administración Central): `192.168.10.192/28`
+     * VLAN 999 (Blackhole / Aislada): Sin enrutamiento IP
+   * **Justificación:** Esta separación limita la propagación de tramas de difusión (como solicitudes ARP o DHCP) únicamente al segmento donde se originan, reduciendo el tráfico innecesario en los enlaces troncales y elevando la seguridad entre zonas comerciales.
+
+2. **Dominios de Colisión (Collision Domains):**
+   * **Cantidad Total:** Un dominio de colisión por cada puerto físico activo operando en modo Full-Duplex (aproximadamente 35 a 40 dominios de colisión activos en la topología total).
+   * **Delimitación:** Delimitados individualmente por cada puerto micro-segmentado de los switches Cisco Catalyst 2960 y 3560.
+   * **Justificación:** Al operar exclusivamente con switches mediante conexiones Ethernet dedicadas en modo Full-Duplex, se eliminan por completo las colisiones de tramas en la red.
+
+
+
+### Estándares de Cableado y Medios Físicos de Enlace
+
+La infraestructura física simulada cumple con la norma de cableado estructurado **TIA/EIA-568B**:
+
+* **Cable Directo (Straight-Through / UTP Cat 6):** Utilizado para interconectar dispositivos de distinta capa OSI, específicamente desde las tarjetas de red de las estaciones de trabajo (PCs) hacia los puertos de acceso de los switches de cada zona (`FastEthernet`).
+* **Cable Cruzado / Agregado LACP (Crossover / UTP Cat 6a / Fibra):** Utilizado para las interconexiones directas Switch-a-Switch en el núcleo y distribución (`Po1`, `Po2`, troncales `GigabitEthernet` y `FastEthernet`), garantizando la velocidad de conmutación de tramas 802.1Q.

@@ -212,3 +212,71 @@ Se migró la topología completa del modo Spanning Tree tradicional 802.1D al mo
 ![Captura de la CLI de SW_Z4_Acceso2 ejecutando show spanning-tree vlan 12](Imagenes/sw_z4_acceso2_spanning-tree.png)
 
 **Descripción de la evidencia:** Demuestra el comportamiento de un switch de acceso operando en modo rstp, con la prioridad por defecto de 32780 (32768 + 12), reconociendo a SW_CORE_1 como la raíz del árbol a través del puerto troncal Fa0/1 (Root FWD) con costo acumulado 38.
+
+
+
+# Asignación de Accesos a Terminales, Optimización PortFast y Hardening de Puertos (Blackhole)
+
+## 1. Descripción de la Implementación
+
+Se procedió con la segregación del tráfico de usuario final mapeando los puertos de los switches de acceso a las VLANs correspondientes de cada zona comercial. Para evitar retrasos en el inicio de sesión y solicitudes de IP por DHCP en las estaciones de trabajo, se habilitó el protocolo portfast en dichos puertos. Asimismo, se aplicó la práctica de aseguramiento (hardening) mandatoria, aislando todos los puertos libres en la VLAN 999 (BLACKHOLE) y apagándolos administrativamente.
+
+## 2. Problemas Encontrados y Soluciones Adoptadas
+
+### Problema: Retraso temporal de conectividad al encender o conectar una PC a los puertos de acceso
+
+| **Aspecto** | **Descripción** |
+|---|---|
+| **Inconveniente** | Al conectar un dispositivo final, la interfaz permanecía en estado de negociación Spanning Tree (luz naranja) durante aproximadamente 30 segundos antes de permitir la transmisión de datos. |
+| **Solución Adoptada** | Se ejecutó el comando `spanning-tree portfast` en los rangos de puertos de acceso a terminales (Fa0/2 - 3 en Zona 4, Fa0/2 - 10 en Zona 1, etc.), garantizando que las interfaces pasen de forma instantánea al estado Forwarding (luz verde) al detectar enlace físico. |
+
+### Problema: Riesgo de intrusión y ataques de Capa 2 en puertos físicos de conmutador no utilizados
+
+| **Aspecto** | **Descripción** |
+|---|---|
+| **Inconveniente** | Dejar las interfaces libres en la VLAN por defecto (VLAN 1) exponía la red a accesos no autorizados, ataques de salto de VLAN (VLAN hopping) o bucles accidentales. |
+| **Solución Adoptada** | Se reasignaron masivamente todos los puertos libres a la VLAN aislada 999 (BLACKHOLE) sin enrutamiento ni acceso a recursos, y se forzó el estado administrativo apagado (`shutdown`). |
+
+## 3. Capturas de Pantalla y Evidencias de Funcionamiento
+
+### Imagen: `show vlan brief` en SW_Z4_Acceso1
+
+![Captura de la CLI de SW_Z4_Acceso1 ejecutando show vlan brief](Imagenes/sw_z4_showVLANbrief1.png)
+
+**Descripción de la evidencia:** Muestra la asignación de puertos en el switch de acceso de la Zona 4. Se observa que la VLAN 42 (Z4_Food) contiene únicamente los puertos activos de terminales (Fa0/2 y Fa0/3), mientras que la VLAN 999 (BLACKHOLE) concentra la totalidad de puertos no utilizados (Fa0/4 a Fa0/24 y Gig0/1 - Gig0/2). El puerto Fa0/1 no figura en la lista de acceso por estar operando correctamente en modo trunking.
+
+# Habilitación de Enrutamiento Inter-VLAN, Direccionamiento de Hosts y Pruebas de Conectividad Extremo a Extremo
+
+## 1. Descripción de la Implementación
+
+Se habilitó el enrutamiento de Capa 3 centralizado en SW_CORE_1 mediante el comando `ip routing` y la creación de sus SVIs asociadas. Se procedió a configurar la pila IP estática (IP, Máscara de Subred y Default Gateway) en la totalidad de estaciones de trabajo pertenecientes a las 5 zonas comerciales. Finalmente, se realizaron pruebas exhaustivas de ICMP (ping) para comprobar la conectividad intra-VLAN e inter-VLAN.
+
+## 2. Problemas Encontrados y Soluciones Adoptadas
+
+### Problema: Mapeo erróneo de la dirección IP de Gateway en la SVI de la VLAN 42
+
+| **Aspecto** | **Descripción** |
+|---|---|
+| **Inconveniente** | Durante las pruebas iniciales de ping desde PC24 (Zona 4) hacia su puerta de enlace (192.168.10.65), las solicitudes expiraban (Request timed out). Al revisar la tabla de enrutamiento en SW_CORE_1, se detectó que a la Vlan42 se le había asignado por error el segmento de la Zona 5 (192.168.10.176/28). |
+| **Solución Adoptada** | Se reingresó a la interfaz de comando de SW_CORE_1, reconfigurando la `interface Vlan 42` con la IP 192.168.10.65 255.255.255.192 y la `interface Vlan 52` con 192.168.10.177 255.255.255.240. La tabla de enrutamiento se actualizó inmediatamente incorporando las 6 subredes directamente conectadas. |
+
+### Problema: Pérdida del primer paquete ICMP en las pruebas inter-VLAN entre la Zona 4 y la Zona 2
+
+| **Aspecto** | **Descripción** |
+|---|---|
+| **Inconveniente** | El primer paquete enviado desde PC24 (192.168.10.66) hacia PC21 (192.168.10.130) resultó en un timeout. |
+| **Solución Adoptada** | Se determinó que es un comportamiento normal en redes Ethernet enrutadas, causado por la latencia en la resolución de la tabla ARP por parte de la SVI del Core. Los ráfagas subsecuentes registraron un 0% de pérdida con tiempos de respuesta de 1ms y TTL de 127. |
+
+## 3. Capturas de Pantalla y Evidencias de Funcionamiento
+
+### Imagen 1: `show ip route` en SW_CORE_1
+
+![Captura de la CLI de SW_CORE_1 ejecutando show ip route](Imagenes/sw_core1_show_ip_route.png)
+
+**Descripción de la evidencia:** Muestra la tabla de enrutamiento del switch multicapa donde se aprecian las 6 subredes directamente conectadas con el prefijo C (192.168.10.0/26, 192.168.10.64/26, 192.168.10.128/27, 192.168.10.160/28, 192.168.10.176/28 y 192.168.10.192/28), validando que el motor de Capa 3 está activo y funcional.
+
+### Imagen 2: `ping 192.168.10.65` y `ping 192.168.10.130` desde PC24
+
+![Captura del Command Prompt de PC24 ejecutando ping 192.168.10.65 y ping 192.168.10.130](Imagenes/ping_PC24.png)
+
+**Descripción de la evidencia:** Comprueba la conectividad exitosa local hacia el Default Gateway de la Zona 4 (192.168.10.65 - 0% de pérdida) y la conectividad Inter-VLAN exitosa hacia la PC21 de la Zona 2 (192.168.10.130 - 100% de éxito en la convergencia final con TTL=127).
